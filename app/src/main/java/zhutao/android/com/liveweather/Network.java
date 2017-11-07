@@ -17,9 +17,7 @@ import zhutao.android.com.liveweather.base.ICallback;
  */
 
 public class Network {
-    public static final String API_KEY = "c7b48eb788064002a185648df68dcd86";
-
-    public static String EACH_TIME_API = "https://free-api.heweather.com/s6/weather/hourly?";
+    public static String SIX_WEATHER_API = "http://www.sojson.com/open/api/weather/json.shtml?city=";
 
     //Get请求
     public static void getRequest(final String url, final ICallback<String> callback) {
