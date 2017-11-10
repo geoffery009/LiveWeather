@@ -94,18 +94,20 @@ public class BaiduLocationService extends Service {
             double latitude = location.getLatitude();
             double longitude = location.getLongitude();
 
+
+            if (TextUtils.isEmpty(city)) {
+                return;
+            }
+            Intent intent = new Intent();
+            intent.putExtra(BaiduLocationReceiver.DATA_EXTRA, location);
+            intent.setAction(BaiduLocationReceiver.LOCATION);
+            LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(BaiduLocationService.this);
+            localBroadcastManager.sendBroadcast(intent);
+
             if (BuildConfig.DEBUG) {
                 Log.e(this.getClass().getName(), addr);
                 Log.e(this.getClass().getName(), country + "," + province + "," + city + "," + cityCode + "," + district + "," + street);
                 Log.e(this.getClass().getName(), latitude + "," + longitude);
-            }
-
-            if (!TextUtils.isEmpty(city)) {
-                Intent intent = new Intent();
-                intent.putExtra(BaiduLocationReceiver.DATA_EXTRA, location);
-                intent.setAction(BaiduLocationReceiver.LOCATION);
-                LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(BaiduLocationService.this);
-                localBroadcastManager.sendBroadcast(intent);
             }
         }
     }

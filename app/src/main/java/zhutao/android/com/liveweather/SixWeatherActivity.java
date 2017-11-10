@@ -1,21 +1,20 @@
 package zhutao.android.com.liveweather;
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
-import android.support.v4.content.LocalBroadcastManager;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.widget.Toolbar;
 import android.text.Html;
-import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
@@ -28,28 +27,31 @@ import com.google.gson.JsonSyntaxException;
 import com.orhanobut.logger.Logger;
 
 import zhutao.android.com.liveweather.base.BaseActivity;
-import zhutao.android.com.liveweather.broadcast.BaiduLocationReceiver;
+import zhutao.android.com.liveweather.lifecycle.BDLocationLiveData;
 import zhutao.android.com.liveweather.model_each_time.SixWeatherBean;
 import zhutao.android.com.liveweather.model_each_time.SixWeatherPresenter;
 import zhutao.android.com.liveweather.model_each_time.SixWeatherView;
 import zhutao.android.com.liveweather.util.DateUtil;
-import zhutao.android.com.liveweather.util.Util;
+
+import static zhutao.android.com.liveweather.model_each_time.SixWeatherPresenter.getWeather;
+import static zhutao.android.com.liveweather.model_each_time.SixWeatherPresenter.icDrawable;
+import static zhutao.android.com.liveweather.model_each_time.SixWeatherPresenter.initTemp;
+import static zhutao.android.com.liveweather.model_each_time.SixWeatherPresenter.initWeek;
+import static zhutao.android.com.liveweather.model_each_time.SixWeatherPresenter.is_F_degree;
 
 public class SixWeatherActivity extends BaseActivity
         implements NavigationView.OnNavigationItemSelectedListener, SixWeatherView, SwipeRefreshLayout.OnRefreshListener {
 
     private SixWeatherPresenter eachTimePresenter;
-    private String province = "";
-    private String city = "";
-    private String cityDistrict;
-    private boolean is_F_degree = false;//华氏度
-    private SixWeatherBean data;
+    private String selectProvince = "";
+    private String selectCity = "";
+    private String cityDistrict = "";
+    private SixWeatherBean data;//show data
     private SwipeRefreshLayout swipeRefreshLayout;
-    private LocalBroadcastManager manager;
     private NavigationView navigationView;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_six_weather);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -72,8 +74,36 @@ public class SixWeatherActivity extends BaseActivity
         eachTimePresenter = new SixWeatherPresenter();
         eachTimePresenter.attachView(this);
 
-        baiduLocationRegisterBroadcast();
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            initLiveData();
+        } else {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+        }
+    }
 
+    private void initLiveData() {
+        BDLocationLiveData liveData = new BDLocationLiveData(this);
+        liveData.observe(this, new android.arch.lifecycle.Observer<BDLocation>() {
+            @Override
+            public void onChanged(@Nullable BDLocation bdLocation) {
+                MenuItem locationItem = navigationView.getMenu().findItem(R.id.nav_location);
+                locationItem.setTitle("当前: " + bdLocation.getCity() + bdLocation.getDistrict());
+
+                getLocWeatherData(bdLocation.getCity().replace("市", ""), bdLocation.getProvince().replace("省", ""));
+            }
+        });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 1) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                initLiveData();
+            } else {
+                this.finish();
+            }
+        }
     }
 
     @Override
@@ -94,9 +124,7 @@ public class SixWeatherActivity extends BaseActivity
 
         if (id == R.id.nav_location) {
         } else if (id == R.id.nav_list) {
-
         } else if (id == R.id.nav_share) {
-
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -108,7 +136,6 @@ public class SixWeatherActivity extends BaseActivity
     protected void onDestroy() {
         super.onDestroy();
         eachTimePresenter.detachView();
-        manager.unregisterReceiver(bdBroadcastReceiver);
     }
 
     @Override
@@ -126,7 +153,7 @@ public class SixWeatherActivity extends BaseActivity
     }
 
     @Override
-    public void showData(String str) {
+    public void showNetwotkData(String str) {
         if (swipeRefreshLayout.isRefreshing())
             swipeRefreshLayout.setRefreshing(false);
         Logger.e(str);
@@ -134,7 +161,7 @@ public class SixWeatherActivity extends BaseActivity
         try {
             data = gson.fromJson(str, SixWeatherBean.class);
             if (data != null && data.getStatus() == 200) {
-                initData();
+                showWeatherData();
             } else {
                 findViewById(R.id.empty_layout).setVisibility(View.VISIBLE);
                 Toast.makeText(this, str, Toast.LENGTH_SHORT).show();
@@ -146,39 +173,23 @@ public class SixWeatherActivity extends BaseActivity
 
     }
 
-    public void baiduLocationRegisterBroadcast() {
-        manager = LocalBroadcastManager.getInstance(this);
-        IntentFilter inflater = new IntentFilter();
-        inflater.addAction(BaiduLocationReceiver.LOCATION);
-        manager.registerReceiver(bdBroadcastReceiver, inflater);
+    //获取位置天气
+    private void getLocWeatherData(String city, String privince) {
+        selectCity = city;
+        selectProvince = privince;
+        is_F_degree = false;
+        getData(true);
     }
-
-    private BroadcastReceiver bdBroadcastReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            BDLocation data = intent.getParcelableExtra(BaiduLocationReceiver.DATA_EXTRA);
-            if (data != null) {
-                MenuItem locationItem = navigationView.getMenu().findItem(R.id.nav_location);
-                locationItem.setTitle("当前: " + data.getCity() + data.getDistrict());
-                city = data.getCity().replace("市", "");
-                province = data.getProvince().replace("省", "");
-                getData(true);
-            }
-        }
-    };
 
 
     private void getData(boolean showProgress) {
-        eachTimePresenter.getData(city, showProgress);
-        initTime();
+        eachTimePresenter.getData(selectCity, showProgress);
     }
 
-    private void initTime() {
-        ((TextView) findViewById(R.id.text_city)).setText(city);
-        ((TextView) findViewById(R.id.text_province)).setText(province);
-    }
+    private void showWeatherData() {
+        ((TextView) findViewById(R.id.text_city)).setText(selectCity);
+        ((TextView) findViewById(R.id.text_province)).setText(selectProvince);
 
-    private void initData() {
         final TextView text_weather_type = findViewById(R.id.text_weather_type);
         String str;
         if (is_F_degree) {
@@ -192,8 +203,7 @@ public class SixWeatherActivity extends BaseActivity
             @Override
             public void onClick(View view) {
                 is_F_degree = !is_F_degree;
-                //todo refresh
-                initData();
+                showWeatherData();
             }
         });
 
@@ -250,105 +260,8 @@ public class SixWeatherActivity extends BaseActivity
         ((ImageView) findViewById(R.id.text_week_5_weather_img)).setImageDrawable(getResources().getDrawable(icDrawable(data.getData().getForecast().get(4).getType())));
     }
 
-    private String initTemp(String str) {
-        try {
-            String temp = "";
-            if (str.contains("高温")) {
-                temp = str.split("高温 ")[1].replace("℃", "");
-            } else if (str.contains("低温")) {
-                temp = str.split("低温 ")[1].replace("℃", "");
-            }
-            return (int) getWeather(Float.parseFloat(temp)) + "°";
-        } catch (Exception e) {
-            Log.e("error", e.toString());
-        }
-        return str;
-    }
-
-    private String initWeek(String week) {
-        try {
-            return week.substring(week.indexOf("日") + 1);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return week;
-        }
-    }
-
-    private int icDrawable(String key) {
-        if (key.contains("雪")) {
-            if (key.contains("暴雪")) {
-                return R.drawable.ic_snow_5;
-            } else if (key.contains("大雪")) {
-                return R.drawable.ic_snow_4;
-            } else if (key.contains("中雪")) {
-                return R.drawable.ic_snow_3;
-            } else if (key.contains("小雪")) {
-                return R.drawable.ic_snow_2;
-            } else if (key.contains("雨夹雪")) {
-                return R.drawable.ic_snow_1;
-            } else {
-                return R.drawable.ic_rainy_2;
-            }
-        } else if (key.contains("雨")) {
-            if (key.contains("雷阵雨")) {
-                return R.drawable.ic_rainy_5;
-            } else if (key.contains("暴雨")) {
-                return R.drawable.ic_rainy_4;
-            } else if (key.contains("大雨")) {
-                return R.drawable.ic_rainy_3;
-            } else if (key.contains("中雨")) {
-                return R.drawable.ic_rainy_2;
-            } else if (key.contains("小雨")) {
-                return R.drawable.ic_rainy_1;
-            } else {
-                return R.drawable.ic_rainy_1;
-            }
-
-        } else if (key.contains("阴")) {
-            return R.drawable.ic_cloudy_1;
-
-        } else if (key.contains("云")) {
-            return R.drawable.ic_cloudy_2;
-
-        } else if (key.contains("风")) {
-            if (key.contains("台风")) {
-                return R.drawable.ic_windy_2;
-            } else {
-                return R.drawable.ic_windy_1;
-            }
-
-        } else if (key.contains("沙")) {
-            if (key.contains("沙尘暴")) {
-                return R.drawable.ic_dity_2;
-            } else {
-                return R.drawable.ic_dity_1;
-            }
-        } else if (key.contains("冰雹")) {
-            return R.drawable.ic_ice;
-
-        } else if (key.contains("雾")) {
-            if (key.contains("雾霾")) {
-                return R.drawable.ic_fog_2;
-            } else {
-                return R.drawable.ic_fog_1;
-            }
-        } else if (key.contains("晴")) {
-            return R.drawable.ic_sunny;
-        } else
-            return R.drawable.ic_sunny;
-    }
-
-    private float getWeather(float f) {
-        if (is_F_degree) {
-            return Util.getCtoF(f);
-        } else {
-            return f;
-        }
-    }
-
     @Override
     public void onRefresh() {
-        is_F_degree = false;
         getData(false);
     }
 }

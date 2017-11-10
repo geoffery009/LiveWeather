@@ -28,10 +28,16 @@ android {
         enabled = true
     }
 
-    sourceSets{
-        main{
+    sourceSets {
+        main {
             jniLibs.srcDir 'libs'
             jni.srcDirs = []
+        }
+    }
+    allprojects {
+        repositories {
+            jcenter()
+            maven { url 'https://maven.google.com' }
         }
     }
 }
@@ -49,4 +55,9 @@ dependencies {
     implementation 'com.squareup.okhttp:okhttp:2.0.0'
     compile 'com.google.android:flexbox:0.3.0'
     implementation files('libs/BaiduLBS_Android.jar')
+    //For Lifecycles
+    implementation "android.arch.lifecycle:runtime:1.0.3"
+    annotationProcessor "android.arch.lifecycle:compiler:1.0.0"
+    //, LiveData, and ViewModel
+    implementation "android.arch.lifecycle:extensions:1.0.0"
 }

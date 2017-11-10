@@ -16,7 +16,7 @@ public class MainActivity extends BaseActivity implements SixWeatherView {
     private SixWeatherPresenter eachTimePresenter;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         eachTimePresenter = new SixWeatherPresenter();
@@ -40,7 +40,7 @@ public class MainActivity extends BaseActivity implements SixWeatherView {
     }
 
     @Override
-    public void showData(String data) {
+    public void showNetwotkData(String data) {
         Logger.e(data);
         Gson gson = new Gson();
         try {
