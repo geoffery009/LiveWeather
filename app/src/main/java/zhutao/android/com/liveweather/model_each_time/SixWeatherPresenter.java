@@ -14,8 +14,8 @@ import zhutao.android.com.liveweather.base.ICallback;
 
 public class SixWeatherPresenter extends BasePresenter<SixWeatherView> {
 
-    public void getData(String city) {
-        if (isViewAttached()) {
+    public void getData(String city, boolean showProgress) {
+        if (isViewAttached() && showProgress) {
             getView().showProgress();
         }
 

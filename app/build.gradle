@@ -1,6 +1,14 @@
 apply plugin: 'com.android.application'
 
 android {
+    signingConfigs {
+        config {
+            keyAlias 'live weather'
+            keyPassword '6781238'
+            storeFile file('E:/zhutao/LiveWeather/key_store.jks')
+            storePassword '6781238'
+        }
+    }
     compileSdkVersion 26
     defaultConfig {
         applicationId "zhutao.android.com.liveweather"
@@ -19,6 +27,13 @@ android {
     dataBinding {
         enabled = true
     }
+
+    sourceSets{
+        main{
+            jniLibs.srcDir 'libs'
+            jni.srcDirs = []
+        }
+    }
 }
 
 dependencies {
@@ -33,4 +48,5 @@ dependencies {
     compile 'com.orhanobut:logger:1.15'
     implementation 'com.squareup.okhttp:okhttp:2.0.0'
     compile 'com.google.android:flexbox:0.3.0'
+    implementation files('libs/BaiduLBS_Android.jar')
 }

@@ -21,7 +21,6 @@ public class MainActivity extends BaseActivity implements SixWeatherView {
         setContentView(R.layout.activity_main);
         eachTimePresenter = new SixWeatherPresenter();
         eachTimePresenter.attachView(this);
-        eachTimePresenter.getData("120.343,36.088");
     }
 
     @Override

@@ -1,8 +1,14 @@
 package zhutao.android.com.liveweather;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.design.widget.NavigationView;
+import android.support.design.widget.Snackbar;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v4.widget.SwipeRefreshLayout;
@@ -16,11 +22,13 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.baidu.location.BDLocation;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.orhanobut.logger.Logger;
 
 import zhutao.android.com.liveweather.base.BaseActivity;
+import zhutao.android.com.liveweather.broadcast.BaiduLocationReceiver;
 import zhutao.android.com.liveweather.model_each_time.SixWeatherBean;
 import zhutao.android.com.liveweather.model_each_time.SixWeatherPresenter;
 import zhutao.android.com.liveweather.model_each_time.SixWeatherView;
@@ -31,12 +39,14 @@ public class SixWeatherActivity extends BaseActivity
         implements NavigationView.OnNavigationItemSelectedListener, SixWeatherView, SwipeRefreshLayout.OnRefreshListener {
 
     private SixWeatherPresenter eachTimePresenter;
-    private String province = "江苏";
-    private String city = "南京";
+    private String province = "";
+    private String city = "";
     private String cityDistrict;
     private boolean is_F_degree = false;//华氏度
     private SixWeatherBean data;
     private SwipeRefreshLayout swipeRefreshLayout;
+    private LocalBroadcastManager manager;
+    private NavigationView navigationView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,18 +61,19 @@ public class SixWeatherActivity extends BaseActivity
         drawer.addDrawerListener(toggle);
         toggle.syncState();
 
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+        navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
         //refresh
         swipeRefreshLayout = findViewById(R.id.swipeRefresh);
-        swipeRefreshLayout.setColorSchemeColors(Color.WHITE);
+        swipeRefreshLayout.setColorSchemeColors(Color.BLACK);
         swipeRefreshLayout.setOnRefreshListener(this);
-
 
         eachTimePresenter = new SixWeatherPresenter();
         eachTimePresenter.attachView(this);
-        getData();
+
+        baiduLocationRegisterBroadcast();
+
     }
 
     @Override
@@ -81,17 +92,10 @@ public class SixWeatherActivity extends BaseActivity
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
-        if (id == R.id.nav_camera) {
-            // Handle the camera action
-        } else if (id == R.id.nav_gallery) {
-
-        } else if (id == R.id.nav_slideshow) {
-
-        } else if (id == R.id.nav_manage) {
+        if (id == R.id.nav_location) {
+        } else if (id == R.id.nav_list) {
 
         } else if (id == R.id.nav_share) {
-
-        } else if (id == R.id.nav_send) {
 
         }
 
@@ -104,16 +108,21 @@ public class SixWeatherActivity extends BaseActivity
     protected void onDestroy() {
         super.onDestroy();
         eachTimePresenter.detachView();
+        manager.unregisterReceiver(bdBroadcastReceiver);
     }
 
     @Override
     public void hideProgress() {
-
+        findViewById(R.id.loading_layout).setVisibility(View.GONE);
+        findViewById(R.id.empty_layout).setVisibility(View.GONE);
+        findViewById(R.id.content_layout).setVisibility(View.VISIBLE);
     }
 
     @Override
     public void showProgress() {
-
+        findViewById(R.id.loading_layout).setVisibility(View.VISIBLE);
+        findViewById(R.id.empty_layout).setVisibility(View.GONE);
+        findViewById(R.id.content_layout).setVisibility(View.GONE);
     }
 
     @Override
@@ -124,9 +133,10 @@ public class SixWeatherActivity extends BaseActivity
         Gson gson = new Gson();
         try {
             data = gson.fromJson(str, SixWeatherBean.class);
-            if (data != null) {
+            if (data != null && data.getStatus() == 200) {
                 initData();
             } else {
+                findViewById(R.id.empty_layout).setVisibility(View.VISIBLE);
                 Toast.makeText(this, str, Toast.LENGTH_SHORT).show();
             }
         } catch (JsonSyntaxException e) {
@@ -136,8 +146,30 @@ public class SixWeatherActivity extends BaseActivity
 
     }
 
-    private void getData() {
-        eachTimePresenter.getData(city);
+    public void baiduLocationRegisterBroadcast() {
+        manager = LocalBroadcastManager.getInstance(this);
+        IntentFilter inflater = new IntentFilter();
+        inflater.addAction(BaiduLocationReceiver.LOCATION);
+        manager.registerReceiver(bdBroadcastReceiver, inflater);
+    }
+
+    private BroadcastReceiver bdBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            BDLocation data = intent.getParcelableExtra(BaiduLocationReceiver.DATA_EXTRA);
+            if (data != null) {
+                MenuItem locationItem = navigationView.getMenu().findItem(R.id.nav_location);
+                locationItem.setTitle("当前: " + data.getCity() + data.getDistrict());
+                city = data.getCity().replace("市", "");
+                province = data.getProvince().replace("省", "");
+                getData(true);
+            }
+        }
+    };
+
+
+    private void getData(boolean showProgress) {
+        eachTimePresenter.getData(city, showProgress);
         initTime();
     }
 
@@ -173,10 +205,29 @@ public class SixWeatherActivity extends BaseActivity
         ((TextView) findViewById(R.id.text_today_min)).setText(initTemp(data.getData().getForecast().get(0).getLow()));
         ((ImageView) findViewById(R.id.text_tody_weather_img)).setImageDrawable(getResources().getDrawable(icDrawable(data.getData().getForecast().get(0).getType())));
 
-        ((TextView) findViewById(R.id.text_pm_two_five)).setText(data.getData().getPmTwoFive() + "(" + data.getData().getQuality() + ")");
+        ((TextView) findViewById(R.id.text_pm_two_five)).setText(data.getData().getPmTwoFive() + "");
+
+        final View pm25ClickView = findViewById(R.id.pm25Layout);
+        pm25ClickView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Snackbar snackbar = Snackbar.make(pm25ClickView, "空气质量：" + data.getData().getQuality() + "\n" + data.getData().getGanmao(), Snackbar.LENGTH_LONG)
+                        .setAction("OK", new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+
+                            }
+                        });
+                snackbar.show();
+                TextView msg = snackbar.getView().findViewById(R.id.snackbar_text);
+                msg.setMaxLines(4);
+            }
+        });
+
         ((TextView) findViewById(R.id.text_wind_des)).setText(data.getData().getForecast().get(0).getFx());
         ((TextView) findViewById(R.id.text_wind)).setText(data.getData().getForecast().get(0).getFl());
         ((TextView) findViewById(R.id.text_shidu)).setText(data.getData().getShidu());
+
 
         ((TextView) findViewById(R.id.text_week_1)).setText(initWeek(data.getData().getYesterday().getDate()));
         ((TextView) findViewById(R.id.text_week_1_weather)).setText(initTemp(data.getData().getYesterday().getLow()) + "/" + initTemp(data.getData().getYesterday().getHigh()));
@@ -216,7 +267,7 @@ public class SixWeatherActivity extends BaseActivity
 
     private String initWeek(String week) {
         try {
-            return week.split("日")[1];
+            return week.substring(week.indexOf("日") + 1);
         } catch (Exception e) {
             e.printStackTrace();
             return week;
@@ -298,6 +349,6 @@ public class SixWeatherActivity extends BaseActivity
     @Override
     public void onRefresh() {
         is_F_degree = false;
-        getData();
+        getData(false);
     }
 }
