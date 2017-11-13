@@ -1,6 +1,7 @@
 package zhutao.android.com.liveweather;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -19,14 +20,11 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.baidu.location.BDLocation;
-import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
-import com.orhanobut.logger.Logger;
 
 import zhutao.android.com.liveweather.base.BaseActivity;
+import zhutao.android.com.liveweather.citylist.CityListActivity;
 import zhutao.android.com.liveweather.lifecycle.BDLocationLiveData;
 import zhutao.android.com.liveweather.model_each_time.SixWeatherBean;
 import zhutao.android.com.liveweather.model_each_time.SixWeatherPresenter;
@@ -124,6 +122,7 @@ public class SixWeatherActivity extends BaseActivity
 
         if (id == R.id.nav_location) {
         } else if (id == R.id.nav_list) {
+            startActivity(new Intent(this, CityListActivity.class));
         } else if (id == R.id.nav_share) {
         }
 
@@ -140,6 +139,8 @@ public class SixWeatherActivity extends BaseActivity
 
     @Override
     public void hideProgress() {
+        if (swipeRefreshLayout.isRefreshing())
+            swipeRefreshLayout.setRefreshing(false);
         findViewById(R.id.loading_layout).setVisibility(View.GONE);
         findViewById(R.id.empty_layout).setVisibility(View.GONE);
         findViewById(R.id.content_layout).setVisibility(View.VISIBLE);
@@ -153,24 +154,18 @@ public class SixWeatherActivity extends BaseActivity
     }
 
     @Override
-    public void showNetwotkData(String str) {
+    public void showEmpty() {
+        findViewById(R.id.loading_layout).setVisibility(View.GONE);
+        findViewById(R.id.empty_layout).setVisibility(View.VISIBLE);
+        findViewById(R.id.content_layout).setVisibility(View.GONE);
+    }
+
+    @Override
+    public void showNetwotkData(SixWeatherBean bean) {
         if (swipeRefreshLayout.isRefreshing())
             swipeRefreshLayout.setRefreshing(false);
-        Logger.e(str);
-        Gson gson = new Gson();
-        try {
-            data = gson.fromJson(str, SixWeatherBean.class);
-            if (data != null && data.getStatus() == 200) {
-                showWeatherData();
-            } else {
-                findViewById(R.id.empty_layout).setVisibility(View.VISIBLE);
-                Toast.makeText(this, str, Toast.LENGTH_SHORT).show();
-            }
-        } catch (JsonSyntaxException e) {
-            e.printStackTrace();
-            Toast.makeText(this, str, Toast.LENGTH_SHORT).show();
-        }
-
+        data = bean;
+        showWeatherData();
     }
 
     //获取位置天气

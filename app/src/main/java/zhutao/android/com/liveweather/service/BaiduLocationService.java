@@ -25,12 +25,6 @@ public class BaiduLocationService extends Service {
     private BDAbstractLocationListener myListener;
 
     @Override
-    public void onCreate() {
-        super.onCreate();
-        init();
-    }
-
-    @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         startLocation();
         return super.onStartCommand(intent, flags, startId);
@@ -71,6 +65,7 @@ public class BaiduLocationService extends Service {
             Log.e(BaiduLocationService.this.getClass().getName(), "start service----> baidu location");
         }
 
+        init();
         mLocationClient.start();
     }
 
@@ -100,7 +95,7 @@ public class BaiduLocationService extends Service {
             }
             Intent intent = new Intent();
             intent.putExtra(BaiduLocationReceiver.DATA_EXTRA, location);
-            intent.setAction(BaiduLocationReceiver.LOCATION);
+            intent.setAction(BaiduLocationReceiver.LOCATION_DATA);
             LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(BaiduLocationService.this);
             localBroadcastManager.sendBroadcast(intent);
 

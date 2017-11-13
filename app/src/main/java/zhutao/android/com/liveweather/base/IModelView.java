@@ -13,5 +13,7 @@ public interface IModelView {
 
     void showProgress();
 
+    void showEmpty();
+
     Activity getThisContext();
 }

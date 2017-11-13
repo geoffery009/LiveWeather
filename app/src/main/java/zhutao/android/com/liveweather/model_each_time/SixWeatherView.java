@@ -7,6 +7,6 @@ import zhutao.android.com.liveweather.base.IModelView;
  */
 
 public abstract interface SixWeatherView extends IModelView {
-    void showNetwotkData(String eachTimeBean);
+    void showNetwotkData(SixWeatherBean sixWeatherBean);
 
 }

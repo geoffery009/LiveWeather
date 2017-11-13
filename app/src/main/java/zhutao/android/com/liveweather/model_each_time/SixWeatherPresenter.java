@@ -1,13 +1,20 @@
 package zhutao.android.com.liveweather.model_each_time;
 
+import android.os.AsyncTask;
 import android.util.Log;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
+import com.orhanobut.logger.Logger;
 
 import java.io.UnsupportedEncodingException;
 
 import zhutao.android.com.liveweather.Network;
 import zhutao.android.com.liveweather.R;
+import zhutao.android.com.liveweather.base.BaseApplication;
 import zhutao.android.com.liveweather.base.BasePresenter;
 import zhutao.android.com.liveweather.base.ICallback;
+import zhutao.android.com.liveweather.util.DateUtil;
 import zhutao.android.com.liveweather.util.Util;
 
 /**
@@ -16,51 +23,120 @@ import zhutao.android.com.liveweather.util.Util;
 
 public class SixWeatherPresenter extends BasePresenter<SixWeatherView> {
     public static boolean is_F_degree = false;//华氏度
+    private Gson gson;
+
+    public SixWeatherPresenter() {
+        gson = new Gson();
+    }
 
     public void getData(String city, boolean showProgress) {
         if (isViewAttached() && showProgress) {
             getView().showProgress();
         }
-
         //location key lang unit
         try {
             city = java.net.URLEncoder.encode(city, "utf-8");
-            String param = Network.SIX_WEATHER_API + city;
-            SixWeatherModel model = new SixWeatherModel();
-            model.params(param).execute(new ICallback<String>() {
-                @Override
-                public void onSuccess(final String result) {
-                    if (isViewAttached()) {
-                        getView().getThisContext().runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                getView().hideProgress();
-                                getView().showNetwotkData(result);
-                            }
-                        });
-                    }
-                }
-
-                @Override
-                public void onFailture(final String msg) {
-                    if (isViewAttached()) {
-                        getView().getThisContext().runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                getView().hideProgress();
-                                getView().showMsg(msg);
-                            }
-                        });
-                    }
-                }
-            });
-
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
             Log.e(this.getClass().getName(), e.toString());
+            return;
         }
+
+        getDBData(city);
     }
 
+    private void getNetworkData(final String city) {
+
+        String param = Network.SIX_WEATHER_API + city;
+        SixWeatherModel model = new SixWeatherModel();
+        model.params(param).execute(new ICallback<String>() {
+            @Override
+            public void onSuccess(final String str) {
+                Logger.e(str);
+                if (isViewAttached()) {
+                    getView().getThisContext().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            getView().hideProgress();
+                            try {
+                                final SixWeatherBean data = gson.fromJson(str, SixWeatherBean.class);
+                                if (data != null && data.getStatus() == 200) {
+                                    //db update
+                                    saveData(city, str, DateUtil.getStringDateShort2());
+                                    getView().showNetwotkData(data);
+                                } else {
+                                    getView().showEmpty();
+                                    getView().showMsg(str);
+                                }
+                            } catch (JsonSyntaxException e) {
+                                e.printStackTrace();
+                                getView().showEmpty();
+                                getView().showMsg(str);
+                            }
+                        }
+                    });
+                }
+
+            }
+
+            @Override
+            public void onFailture(final String msg) {
+                if (isViewAttached()) {
+                    getView().getThisContext().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            getView().hideProgress();
+                            getView().showMsg(msg);
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    private void getDBData(final String city) {
+        AsyncTask<String, Integer, SixWeather> task = new AsyncTask<String, Integer, SixWeather>() {
+
+            @Override
+            protected SixWeather doInBackground(String[] objects) {
+                return BaseApplication.getDb(getView().getThisContext()).getSixWeatherDao().findByCity(city);
+            }
+
+            @Override
+            protected void onPostExecute(SixWeather o) {
+                super.onPostExecute(o);
+
+                if (o == null || DateUtil.compareDay(o.getUpdateT(), DateUtil.getStringDateShort2()) < 0) {
+                    getNetworkData(city);
+                } else {
+                    final SixWeatherBean data = gson.fromJson(o.getDatas(), SixWeatherBean.class);
+                    if (isViewAttached()) {
+                        getView().getThisContext().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                getView().hideProgress();
+                                getView().showNetwotkData(data);
+                            }
+                        });
+                    }
+                }
+            }
+        };
+        task.execute();
+    }
+
+    public void saveData(String city, String result, String updateDayT) {
+        final SixWeather sixWeather = new SixWeather(city, result, updateDayT);
+
+        AsyncTask<Void, Integer, Void> task = new AsyncTask<Void, Integer, Void>() {
+            @Override
+            protected Void doInBackground(Void... voids) {
+                BaseApplication.getDb(getView().getThisContext()).getSixWeatherDao().insert(sixWeather);
+                return null;
+            }
+        };
+        task.execute();
+    }
 
     public static String initTemp(String str) {
         try {

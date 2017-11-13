@@ -33,7 +33,7 @@ public class BDLocationLifecycle implements LifecycleObserver {
     public void onCreate() {//Activity onCreate
         manager = LocalBroadcastManager.getInstance(c);
         IntentFilter inflater = new IntentFilter();
-        inflater.addAction(BaiduLocationReceiver.LOCATION);
+        inflater.addAction(BaiduLocationReceiver.LOCATION_DATA);
         manager.registerReceiver(callBack, inflater);
     }
 
