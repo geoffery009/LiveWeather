@@ -4,10 +4,11 @@
     <color name="colorPrimaryDark">#2d3982</color>
     <color name="colorAccent">#FF4081</color>
 
-    <color name="text_white_color">#ffffff</color>
-    <color name="text_white_color_sub">#c1bdbd</color>
+    <color name="color_white_bg">#FEFEFE</color>
+    <color name="text_white_color">#FEFEFE</color>
+    <color name="text_white_color_sub">#d4d5dd</color>
 
-    <color name="color_White_Yellow">#ebe218</color>
-    <color name="color_White_Green">#2d3982</color>
+    <color name="color_White_Yellow">#F0E682</color>
+    <color name="color_White_Green">#303A83</color>
     <color name="color_White_Gray">#ffffff</color>
 </resources>

@@ -15,16 +15,24 @@ public class SixWeather {
     @NonNull
     private String city;
 
+    @ColumnInfo(name = "province")
+    private String province;
+
     @ColumnInfo(name = "datas")
     private String datas;
 
     @ColumnInfo(name = "updateT")
     private String updateT;
 
-    public SixWeather(String city, String datas, String updateT) {
+    public SixWeather(@NonNull String city, String province, String datas, String updateT) {
         this.city = city;
+        this.province = province;
         this.datas = datas;
         this.updateT = updateT;
+    }
+
+    public String getProvince() {
+        return province;
     }
 
     public String getUpdateT() {

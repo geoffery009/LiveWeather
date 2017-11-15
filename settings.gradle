@@ -1,1 +1,1 @@
-include ':app', ':telephone'
+include ':app', ':telephone', ':citypicker'

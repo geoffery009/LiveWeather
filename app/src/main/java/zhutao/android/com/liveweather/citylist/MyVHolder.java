@@ -1,5 +1,6 @@
 package zhutao.android.com.liveweather.citylist;
 
+import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 
@@ -9,9 +10,11 @@ import android.view.View;
 
 public class MyVHolder extends RecyclerView.ViewHolder {
     public View itemView;
+    public Context context;
 
-    public MyVHolder(View itemView) {
+    public MyVHolder(View itemView, Context context) {
         super(itemView);
+        this.context = context;
         this.itemView = itemView;
     }
 }

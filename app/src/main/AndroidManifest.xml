@@ -43,6 +43,9 @@
         <activity
             android:name=".citylist.CityListActivity"
             android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name="com.zaaach.citypicker.CityPickerActivity"
+            android:theme="@style/AppTheme.NoActionBar" />
         //百度定位 appid
         <meta-data
             android:name="com.baidu.lbsapi.API_KEY"

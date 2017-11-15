@@ -20,33 +20,63 @@
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:padding="16dp">
+                android:paddingBottom="8dp"
+                android:paddingLeft="16dp"
+                android:paddingTop="8dp">
 
-                <TextView
-                    android:id="@+id/text_city"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_alignParentLeft="true"
                     android:layout_centerVertical="true"
-                    android:text="@{data.city}"
-                    android:textColor="@color/color_White_Green" />
+                    android:orientation="vertical">
 
-                <TextView
-                    android:id="@+id/text_weather"
-                    android:layout_width="72dp"
-                    android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:layout_marginRight="16dp"
-                    android:layout_toLeftOf="@+id/img_weather"
-                    android:text="@{data.weather}"
-                    android:textColor="@color/text_white_color_sub" />
+                    <TextView
+                        android:id="@+id/text_weather"
+                        android:layout_width="72dp"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:layout_marginRight="16dp"
+                        android:text="@{data.weather}"
+                        android:textColor="@color/text_white_color_sub"
+                        android:textSize="18dp" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/text_temperature"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@{data.temperature}"
+                            android:textSize="36sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="top|fill_vertical"
+                            android:text="@{data.flag?@string/temperature_f:@string/temperature_c}" />
+                    </LinearLayout>
+
+
+                    <TextView
+                        android:id="@+id/text_city"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentLeft="true"
+                        android:layout_centerVertical="true"
+                        android:text='@{data.city+" , "+data.province}'
+                        android:textColor="@color/text_white_color_sub" />
+                </LinearLayout>
 
                 <ImageView
                     android:id="@+id/img_weather"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
                     android:layout_alignParentRight="true"
                     android:layout_centerVertical="true"
+                    android:layout_margin="8dp"
                     android:src="@drawable/ic_cloudy_2"
                     android:tint="@color/color_White_Yellow" />
 

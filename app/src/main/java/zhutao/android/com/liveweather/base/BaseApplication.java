@@ -11,15 +11,16 @@ import com.tencent.bugly.crashreport.CrashReport;
  */
 
 public class BaseApplication extends Application {
-    private static AppDatabase db;
+    public static AppDatabase db;
 
     @Override
     public void onCreate() {
         super.onCreate();
         CrashReport.initCrashReport(getApplicationContext(), "db5f783893", false);
+        getDb(this);
     }
 
-    public static AppDatabase getDb(Context context) {
+    private AppDatabase getDb(Context context) {
         if (db == null) {
             //create db
             db = Room.databaseBuilder(context, AppDatabase.class, "db").build();
